@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devotee Service Allotment</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Daily Service Allotment</h1>
+
+        <h2>1. Setup Devotees & Categories</h2>
+        <div class="setup-grid">
+            <div class="input-group">
+                <input type="text" id="devoteeName" placeholder="Enter Devotee Name">
+                <button onclick="addDevotee()">Add Devotee</button>
+            </div>
+            <div id="devoteeList" class="tag-container"></div>
+        </div>
+
+        <div class="category-setup">
+            <h3>Assign Devotees to Services</h3>
+            <div id="serviceCategories"></div>
+        </div>
+
+        <hr>
+
+        <h2>2. Daily Management</h2>
+        <div class="controls">
+            <button class="btn-primary" onclick="generateAllotment()">Generate Today's Allotment</button>
+            <button class="btn-danger" onclick="toggleLeave()">Toggle Entire Leave Day</button>
+        </div>
+        
+        <div id="statusMessage"></div>
+
+        <div id="allotmentDisplay" class="allotment-grid"></div>
+
+        <hr>
+
+        <h2>Today's Service Summary</h2>
+        <div id="summaryTable"></div>
+
+        <hr>
+
+        <h2>Service-wise Count (Last 30 Days)</h2>
+        <div id="serviceWiseCount"></div>
+
+        <hr>
+
+        <h2>Total Service Count by Devotee (Last 30 Days)</h2>
+        <div id="devoteeWiseCount"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
