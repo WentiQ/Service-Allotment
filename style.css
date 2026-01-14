@@ -211,7 +211,11 @@ button:active {
     border: 1px solid #000;
 }
 
-.summary-table th:first-child,
+.summary-table th:first-child { 
+    width: 80px; 
+    text-align: center; 
+}
+
 .devotee-stats-table th:first-child { 
     width: 40px; 
     text-align: center; 
@@ -229,10 +233,26 @@ button:active {
     border: 1px solid #000;
 }
 
-.summary-table td:first-child,
 .devotee-stats-table td:first-child { 
     text-align: center; 
     font-weight: 600; 
+}
+
+/* Vertical text for summary table categories */
+.summary-table .vertical-text {
+    writing-mode: vertical-lr;
+    text-orientation: mixed;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 700;
+    padding: 12px 8px;
+    background: #f5f5f5;
+    min-height: 120px;
+}
+
+.summary-table .vertical-content {
+    transform: rotate(180deg);
+    white-space: nowrap;
 }
 
 .devotee-stats-table th:last-child,

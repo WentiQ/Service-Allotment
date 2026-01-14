@@ -198,24 +198,81 @@ function renderSummaryTable(todayRecord) {
 
     const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+    // Group services
+    const serviceGroups = {
+        roomCleaning: {
+            title: 'Room Cleaning',
+            services: ['Right Room', 'Left Room', 'Flat-2 Room']
+        },
+        prasadamOffering: {
+            title: 'Prasadam Offering',
+            services: ['Prasadam - Morning', 'Prasadam - Afternoon', 'Prasadam - Evening']
+        },
+        prasadamAreaCleaning: {
+            title: 'Prasadam Area Cleaning',
+            services: ['Area Clean - Morning', 'Area Clean - Afternoon', 'Area Clean - Evening']
+        }
+    };
+
+    // Separate/standalone services
+    const standaloneServices = ['Altar cleaning', 'Temple Hall Cleaning', 'Outside Area'];
+
+    let tableRows = '';
+
+    // Add standalone services first
+    standaloneServices.forEach(service => {
+        if (todayRecord.allocations[service]) {
+            const devotee = todayRecord.allocations[service];
+            tableRows += `
+                <tr>
+                    <td colspan="2">${service}</td>
+                    <td><strong>${devotee}</strong></td>
+                </tr>
+            `;
+        }
+    });
+
+    // Add grouped services with rowspan
+    Object.entries(serviceGroups).forEach(([key, group]) => {
+        const groupServices = group.services.filter(s => todayRecord.allocations[s]);
+        if (groupServices.length > 0) {
+            groupServices.forEach((service, idx) => {
+                const devotee = todayRecord.allocations[service];
+                if (idx === 0) {
+                    // First row with vertical category cell
+                    tableRows += `
+                        <tr>
+                            <td class="vertical-text" rowspan="${groupServices.length}">
+                                <div class="vertical-content">${group.title}</div>
+                            </td>
+                            <td>${service.replace('Right Room', 'Right').replace('Left Room', 'Left').replace('Flat-2 Room', 'Flat-2').replace('Prasadam - ', '').replace('Area Clean - ', '')}</td>
+                            <td><strong>${devotee}</strong></td>
+                        </tr>
+                    `;
+                } else {
+                    // Subsequent rows without category cell
+                    tableRows += `
+                        <tr>
+                            <td>${service.replace('Right Room', 'Right').replace('Left Room', 'Left').replace('Flat-2 Room', 'Flat-2').replace('Prasadam - ', '').replace('Area Clean - ', '')}</td>
+                            <td><strong>${devotee}</strong></td>
+                        </tr>
+                    `;
+                }
+            });
+        }
+    });
+
     const tableHTML = `
         <div class="date-header">${currentDate}</div>
         <table class="summary-table">
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Service</th>
+                    <th colspan="2">Service</th>
                     <th>Assigned Devotee</th>
                 </tr>
             </thead>
             <tbody>
-                ${Object.entries(todayRecord.allocations).map(([service, devotee], index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${service}</td>
-                        <td><strong>${devotee}</strong></td>
-                    </tr>
-                `).join('')}
+                ${tableRows}
             </tbody>
         </table>
     `;
