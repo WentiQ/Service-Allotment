@@ -374,5 +374,162 @@ function removeDevotee(name) {
     saveAndRefresh();
 }
 
+// Download summary table as image
+async function downloadSummaryAsImage() {
+    const summaryContainer = document.getElementById('summaryTable');
+    
+    if (!summaryContainer || !summaryContainer.innerHTML.trim()) {
+        alert('No summary table to download. Please generate an allotment first.');
+        return;
+    }
+
+    try {
+        // Create a wrapper with white background
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 540px;
+            background: white;
+            padding: 40px 30px;
+            z-index: 10000;
+        `;
+        
+        // Clone the summary container to preserve all styles
+        const clonedContent = summaryContainer.cloneNode(true);
+        wrapper.appendChild(clonedContent);
+        document.body.appendChild(wrapper);
+
+        // Wait a bit for styles to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Capture with 9:16 aspect ratio (540x960)
+        const canvas = await html2canvas(wrapper, {
+            backgroundColor: '#ffffff',
+            scale: 2.5,
+            logging: false,
+            useCORS: true,
+            allowTaint: true
+        });
+
+        // Remove wrapper
+        document.body.removeChild(wrapper);
+
+        // Crop or resize to exact 9:16 ratio if needed
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 540 * 2.5;
+        finalCanvas.height = 890 * 2.5;
+        const ctx = finalCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        ctx.drawImage(canvas, 0, 0);
+
+        // Convert to blob and download
+        finalCanvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const date = new Date().toLocaleDateString('en-US').replace(/\//g, '-');
+            link.download = `Service-Summary-${date}.png`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Failed to generate image. Please try again.');
+    }
+}
+
+// Share to WhatsApp
+async function shareToWhatsApp() {
+    const summaryContainer = document.getElementById('summaryTable');
+    
+    if (!summaryContainer || !summaryContainer.innerHTML.trim()) {
+        alert('No summary table to share. Please generate an allotment first.');
+        return;
+    }
+
+    try {
+        // Create a wrapper with white background
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 540px;
+            background: white;
+            padding: 40px 30px;
+            z-index: 10000;
+        `;
+        
+        // Clone the summary container to preserve all styles
+        const clonedContent = summaryContainer.cloneNode(true);
+        wrapper.appendChild(clonedContent);
+        document.body.appendChild(wrapper);
+
+        // Wait a bit for styles to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Capture with 9:16 aspect ratio
+        const canvas = await html2canvas(wrapper, {
+            backgroundColor: '#ffffff',
+            scale: 2.5,
+            logging: false,
+            useCORS: true,
+            allowTaint: true
+        });
+
+        // Remove wrapper
+        document.body.removeChild(wrapper);
+
+        // Create final canvas with exact 9:16 ratio
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 540 * 2.5;
+        finalCanvas.height = 890 * 2.5;
+        const ctx = finalCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        ctx.drawImage(canvas, 0, 0);
+
+        // Convert to blob
+        finalCanvas.toBlob(async (blob) => {
+            const date = new Date().toLocaleDateString('en-US').replace(/\//g, '-');
+            const file = new File([blob], `Service-Summary-${date}.png`, { type: 'image/png' });
+
+            // Try Web Share API (works on mobile)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Service Summary',
+                        text: `Daily Service Allotment - ${date}`
+                    });
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error('Error sharing:', err);
+                        alert('Could not share. Please download and share manually.');
+                    }
+                }
+            } else {
+                // Fallback: Download the image and show instructions
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = `Service-Summary-${date}.png`;
+                link.href = url;
+                link.click();
+                URL.revokeObjectURL(url);
+                
+                alert('Image downloaded! Please open WhatsApp and share the downloaded image manually.\n\n(Direct WhatsApp sharing works on mobile devices)');
+            }
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Error generating image:', error);
+        alert('Failed to generate image. Please try again.');
+    }
+}
+
 // Run on load
 init();

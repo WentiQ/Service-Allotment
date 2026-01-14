@@ -40,6 +40,11 @@
 
         <h2>Today's Service Summary</h2>
         <div id="summaryTable"></div>
+        
+        <div class="button-row">
+            <button class="btn-download" onclick="downloadSummaryAsImage()">📥 Download </button>
+            <button class="btn-share" onclick="shareToWhatsApp()">📤 Share </button>
+        </div>
 
         <hr>
 
@@ -51,6 +56,7 @@
         <h2>Total Service Count by Devotee (Last 30 Days)</h2>
         <div id="devoteeWiseCount"></div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
