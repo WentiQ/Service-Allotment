@@ -235,6 +235,48 @@ button:active {
     margin-top: 10px;
 }
 
+/* Confirmation Section */
+.confirmation-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.confirmation-card {
+    border: 1px solid #000;
+    padding: 12px;
+}
+
+.confirmation-card h4 {
+    font-size: 15px;
+    margin-bottom: 5px;
+}
+
+.confirmation-card label {
+    display: block;
+    font-weight: 600;
+    margin: 10px 0 5px 0;
+    font-size: 14px;
+}
+
+.confirmation-card select {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.confirmed-message {
+    text-align: center;
+    padding: 20px;
+    border: 2px solid #000;
+    background: #f0f0f0;
+}
+
+.confirmed-message h3 {
+    color: #000;
+    margin-bottom: 15px;
+}
+
 /* Tables */
 .date-header { 
     text-align: center; 

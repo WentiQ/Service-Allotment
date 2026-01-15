@@ -26,10 +26,15 @@
 
         <hr>
 
-        <h2>2. Daily Management</h2>
+        <h2>2. Today's Service Confirmation</h2>
+        <div id="todayConfirmation"></div>
+
+        <hr>
+
+        <h2>3. Tomorrow's Schedule</h2>
         <div class="controls">
-            <button class="btn-primary" onclick="generateAllotment()">Generate Today's Allotment</button>
-            <button class="btn-danger" onclick="toggleLeave()">Toggle Entire Leave Day</button>
+            <button class="btn-primary" onclick="generateAllotment()">Generate Tomorrow's Allotment</button>
+            <button class="btn-danger" onclick="toggleLeave()">Toggle Tomorrow as Leave Day</button>
         </div>
         
         <div id="statusMessage"></div>
@@ -38,7 +43,7 @@
 
         <hr>
 
-        <h2>Today's Service Summary</h2>
+        <h2>Tomorrow's Service Summary</h2>
         <div id="summaryTable"></div>
         
         <div class="button-row">

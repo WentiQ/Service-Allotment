@@ -8,7 +8,7 @@ const services = [
 
 let devotees = JSON.parse(localStorage.getItem('devotees')) || [];
 let assignments = JSON.parse(localStorage.getItem('assignments')) || {}; // { service: [devoteeNames] }
-let history = JSON.parse(localStorage.getItem('serviceHistory')) || []; // [{date, leave, allocations: {service: devotee}, unavailable: {service: [devoteeNames]}}]
+let history = JSON.parse(localStorage.getItem('serviceHistory')) || []; // [{date, leave, allocations: {service: devotee}, unavailable: {service: [devoteeNames]}, confirmed: {service: devotee}, isConfirmed: boolean}]
 
 // Initialize UI
 function init() {
@@ -61,11 +61,12 @@ function assignToService(service, name) {
 
 // 3. Balancing Algorithm
 function getServiceCount(devoteeName) {
-    // Look at last 30 non-leave entries
-    const activeHistory = history.filter(h => !h.leave).slice(-30);
+    // Look at last 30 non-leave confirmed entries
+    const activeHistory = history.filter(h => !h.leave && h.isConfirmed).slice(-30);
     let count = 0;
     activeHistory.forEach(day => {
-        Object.values(day.allocations).forEach(d => {
+        const services = day.confirmed || day.allocations;
+        Object.values(services).forEach(d => {
             if (d === devoteeName) count++;
         });
     });
@@ -74,10 +75,11 @@ function getServiceCount(devoteeName) {
 
 function getServiceCountByService(devoteeName, service) {
     // Count how many times a devotee did a specific service in last 30 days
-    const activeHistory = history.filter(h => !h.leave).slice(-30);
+    const activeHistory = history.filter(h => !h.leave && h.isConfirmed).slice(-30);
     let count = 0;
     activeHistory.forEach(day => {
-        if (day.allocations[service] === devoteeName) {
+        const services = day.confirmed || day.allocations;
+        if (services[service] === devoteeName) {
             count++;
         }
     });
@@ -106,45 +108,88 @@ function getDevoteeWiseStats() {
     return stats;
 }
 
-function generateAllotment() {
+function getTodaysRecord() {
     const today = new Date().toLocaleDateString();
-    const todaysAllotment = { date: today, leave: false, allocations: {}, unavailable: {}, originalAllocations: {} };
+    return history.find(h => h.date === today);
+}
+
+function getTomorrowsRecord() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toLocaleDateString();
+    return history.find(h => h.date === tomorrowDate);
+}
+
+function generateAllotment() {
+    // Check if today's services are confirmed (if today's record exists)
+    const todayRecord = getTodaysRecord();
+    if (todayRecord && !todayRecord.leave && !todayRecord.isConfirmed) {
+        alert("Please confirm today's services before generating tomorrow's schedule!");
+        return;
+    }
+
+    // Generate for tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toLocaleDateString();
+    
+    // Check if tomorrow's schedule already exists
+    const existingTomorrow = getTomorrowsRecord();
+    if (existingTomorrow) {
+        alert("Tomorrow's schedule has already been generated!");
+        return;
+    }
+
+    const tomorrowsAllotment = { 
+        date: tomorrowDate, 
+        leave: false, 
+        allocations: {}, 
+        unavailable: {}, 
+        originalAllocations: {},
+        confirmed: {},
+        isConfirmed: false
+    };
 
     services.forEach(s => {
         const candidates = assignments[s] || [];
         if (candidates.length > 0) {
             // Sort by service count (ascending) to pick the one who did it least
             candidates.sort((a, b) => getServiceCount(a) - getServiceCount(b));
-            todaysAllotment.allocations[s] = candidates[0];
-            todaysAllotment.originalAllocations[s] = candidates[0]; // Store original
+            tomorrowsAllotment.allocations[s] = candidates[0];
+            tomorrowsAllotment.originalAllocations[s] = candidates[0]; // Store original
         }
     });
 
-    history.push(todaysAllotment);
+    history.push(tomorrowsAllotment);
     saveAndRefresh();
 }
 
 function reassign(service) {
-    const currentDay = history[history.length - 1];
-    const currentDevotee = currentDay.allocations[service];
-    
-    // Initialize unavailable list for this service if it doesn't exist
-    if (!currentDay.unavailable) currentDay.unavailable = {};
-    if (!currentDay.unavailable[service]) currentDay.unavailable[service] = [];
-    
-    // Mark current devotee as unavailable for today
-    if (!currentDay.unavailable[service].includes(currentDevotee)) {
-        currentDay.unavailable[service].push(currentDevotee);
+    const tomorrowRecord = getTomorrowsRecord();
+    if (!tomorrowRecord) {
+        alert("Please generate tomorrow's allotment first!");
+        return;
     }
     
-    // Filter out all unavailable devotees for this service today
+    const currentDevotee = tomorrowRecord.allocations[service];
+    
+    // Initialize unavailable list for this service if it doesn't exist
+    if (!tomorrowRecord.unavailable) tomorrowRecord.unavailable = {};
+    if (!tomorrowRecord.unavailable[service]) tomorrowRecord.unavailable[service] = [];
+    
+    // Mark current devotee as unavailable for tomorrow
+    if (!tomorrowRecord.unavailable[service].includes(currentDevotee)) {
+        tomorrowRecord.unavailable[service].push(currentDevotee);
+    }
+    
+    // Filter out all unavailable devotees for this service tomorrow
     const candidates = (assignments[service] || []).filter(d => 
-        !currentDay.unavailable[service].includes(d)
+        !tomorrowRecord.unavailable[service].includes(d)
     );
 
     if (candidates.length > 0) {
         candidates.sort((a, b) => getServiceCount(a) - getServiceCount(b));
-        currentDay.allocations[service] = candidates[0];
+        tomorrowRecord.allocations[service] = candidates[0];
         saveAndRefresh();
     } else {
         alert("No other available devotees assigned to this category!");
@@ -152,27 +197,27 @@ function reassign(service) {
 }
 
 function resetServiceAvailability(service) {
-    const currentDay = history[history.length - 1];
+    const tomorrowRecord = getTomorrowsRecord();
     
-    if (!currentDay || currentDay.leave) {
-        alert("Please generate today's allotment first!");
+    if (!tomorrowRecord || tomorrowRecord.leave) {
+        alert("Please generate tomorrow's allotment first!");
         return;
     }
     
     // Clear the unavailable list for this service
-    if (currentDay.unavailable && currentDay.unavailable[service]) {
-        currentDay.unavailable[service] = [];
+    if (tomorrowRecord.unavailable && tomorrowRecord.unavailable[service]) {
+        tomorrowRecord.unavailable[service] = [];
     }
     
     // Restore the original assignment for this service
-    if (currentDay.originalAllocations && currentDay.originalAllocations[service]) {
-        currentDay.allocations[service] = currentDay.originalAllocations[service];
+    if (tomorrowRecord.originalAllocations && tomorrowRecord.originalAllocations[service]) {
+        tomorrowRecord.allocations[service] = tomorrowRecord.originalAllocations[service];
     } else {
         // Fallback: if no original stored (for old data), recalculate
         const candidates = assignments[service] || [];
         if (candidates.length > 0) {
             candidates.sort((a, b) => getServiceCount(a) - getServiceCount(b));
-            currentDay.allocations[service] = candidates[0];
+            tomorrowRecord.allocations[service] = candidates[0];
         }
     }
     
@@ -180,10 +225,13 @@ function resetServiceAvailability(service) {
 }
 
 function toggleLeave() {
-    const today = new Date().toLocaleDateString();
-    let dayIdx = history.findIndex(h => h.date === today);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = tomorrow.toLocaleDateString();
+    
+    let dayIdx = history.findIndex(h => h.date === tomorrowDate);
     if (dayIdx === -1) {
-        history.push({ date: today, leave: true, allocations: {} });
+        history.push({ date: tomorrowDate, leave: true, allocations: {}, isConfirmed: false });
     } else {
         history[dayIdx].leave = !history[dayIdx].leave;
     }
@@ -192,17 +240,84 @@ function toggleLeave() {
 
 // UI Refreshers
 function renderToday() {
+    renderTodayConfirmation();
+    renderTomorrowSchedule();
+    renderServiceWiseCount();
+    renderDevoteeWiseCount();
+}
+
+function renderTodayConfirmation() {
+    const container = document.getElementById('todayConfirmation');
+    const todayRecord = getTodaysRecord();
+    
+    if (!todayRecord) {
+        container.innerHTML = "<p style='text-align:center; color:#999;'>No services scheduled for today.</p>";
+        return;
+    }
+    
+    if (todayRecord.leave) {
+        container.innerHTML = "<h3>Today is a Leave Day. No services to confirm.</h3>";
+        return;
+    }
+    
+    if (todayRecord.isConfirmed) {
+        container.innerHTML = `
+            <div class="confirmed-message">
+                <h3>✓ Today's services have been confirmed</h3>
+                <button onclick="editConfirmation()">Edit Confirmation</button>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show confirmation form
+    container.innerHTML = `
+        <h3>Confirm Today's Services (${new Date().toLocaleDateString()})</h3>
+        <div class="confirmation-grid">
+            ${services.map(service => {
+                if (!todayRecord.allocations[service]) return '';
+                const assignedDevotee = todayRecord.allocations[service];
+                const confirmedDevotee = todayRecord.confirmed?.[service] || assignedDevotee;
+                
+                return `
+                    <div class="confirmation-card">
+                        <h4>${service}</h4>
+                        <p><small>Assigned: ${assignedDevotee}</small></p>
+                        <label>Who performed this service?</label>
+                        <select id="confirm_${service.replace(/\s+/g, '_')}" onchange="updateConfirmation('${service}', this.value)">
+                            <option value="${assignedDevotee}" ${confirmedDevotee === assignedDevotee ? 'selected' : ''}>${assignedDevotee} (Assigned)</option>
+                            ${(assignments[service] || [])
+                                .filter(d => d !== assignedDevotee)
+                                .map(d => `<option value="${d}" ${confirmedDevotee === d ? 'selected' : ''}>${d}</option>`)
+                                .join('')}
+                            <option value="NONE" ${confirmedDevotee === 'NONE' ? 'selected' : ''}>No one (Service not done)</option>
+                        </select>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <button class="btn-primary" onclick="confirmTodaysServices()" style="margin-top: 20px;">Confirm All Services</button>
+    `;
+}
+
+function renderTomorrowSchedule() {
     const container = document.getElementById('allotmentDisplay');
     const summaryContainer = document.getElementById('summaryTable');
-    const todayRecord = history[history.length - 1];
+    const tomorrowRecord = getTomorrowsRecord();
     
-    if (!todayRecord || todayRecord.leave) {
-        container.innerHTML = todayRecord?.leave ? "<h3>Today is a Leave Day. No services counted.</h3>" : "<h3>Click generate to start today.</h3>";
+    if (!tomorrowRecord) {
+        container.innerHTML = "<h3>Click 'Generate Tomorrow's Allotment' to create schedule.</h3>";
+        summaryContainer.innerHTML = "";
+        return;
+    }
+    
+    if (tomorrowRecord.leave) {
+        container.innerHTML = "<h3>Tomorrow is a Leave Day. No services counted.</h3>";
         summaryContainer.innerHTML = "";
         return;
     }
 
-    container.innerHTML = Object.entries(todayRecord.allocations).map(([service, devotee]) => `
+    container.innerHTML = Object.entries(tomorrowRecord.allocations).map(([service, devotee]) => `
         <div class="service-card">
             <h4>${service}</h4>
             <p>Assigned: <strong>${devotee}</strong></p>
@@ -215,9 +330,48 @@ function renderToday() {
     `).join('');
 
     // Render summary table
-    renderSummaryTable(todayRecord);
-    renderServiceWiseCount();
-    renderDevoteeWiseCount();
+    renderSummaryTable(tomorrowRecord);
+}
+
+function updateConfirmation(service, devotee) {
+    const todayRecord = getTodaysRecord();
+    if (!todayRecord) return;
+    
+    if (!todayRecord.confirmed) todayRecord.confirmed = {};
+    todayRecord.confirmed[service] = devotee;
+    localStorage.setItem('serviceHistory', JSON.stringify(history));
+}
+
+function confirmTodaysServices() {
+    const todayRecord = getTodaysRecord();
+    if (!todayRecord) {
+        alert("No services to confirm for today!");
+        return;
+    }
+    
+    // Initialize confirmed object if not exists
+    if (!todayRecord.confirmed) {
+        todayRecord.confirmed = {};
+    }
+    
+    // For any service not explicitly confirmed, use the assigned devotee
+    services.forEach(service => {
+        if (todayRecord.allocations[service] && !todayRecord.confirmed[service]) {
+            todayRecord.confirmed[service] = todayRecord.allocations[service];
+        }
+    });
+    
+    todayRecord.isConfirmed = true;
+    saveAndRefresh();
+    alert("Today's services have been confirmed!");
+}
+
+function editConfirmation() {
+    const todayRecord = getTodaysRecord();
+    if (!todayRecord) return;
+    
+    todayRecord.isConfirmed = false;
+    saveAndRefresh();
 }
 
 function renderSummaryTable(todayRecord) {
@@ -228,7 +382,9 @@ function renderSummaryTable(todayRecord) {
         return;
     }
 
-    const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // Use the date from the record instead of current date
+    const recordDate = new Date(todayRecord.date);
+    const currentDate = recordDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
     // Group services
     const serviceGroups = {
