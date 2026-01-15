@@ -108,7 +108,7 @@ function getDevoteeWiseStats() {
 
 function generateAllotment() {
     const today = new Date().toLocaleDateString();
-    const todaysAllotment = { date: today, leave: false, allocations: {}, unavailable: {} };
+    const todaysAllotment = { date: today, leave: false, allocations: {}, unavailable: {}, originalAllocations: {} };
 
     services.forEach(s => {
         const candidates = assignments[s] || [];
@@ -116,6 +116,7 @@ function generateAllotment() {
             // Sort by service count (ascending) to pick the one who did it least
             candidates.sort((a, b) => getServiceCount(a) - getServiceCount(b));
             todaysAllotment.allocations[s] = candidates[0];
+            todaysAllotment.originalAllocations[s] = candidates[0]; // Store original
         }
     });
 
@@ -150,6 +151,34 @@ function reassign(service) {
     }
 }
 
+function resetServiceAvailability(service) {
+    const currentDay = history[history.length - 1];
+    
+    if (!currentDay || currentDay.leave) {
+        alert("Please generate today's allotment first!");
+        return;
+    }
+    
+    // Clear the unavailable list for this service
+    if (currentDay.unavailable && currentDay.unavailable[service]) {
+        currentDay.unavailable[service] = [];
+    }
+    
+    // Restore the original assignment for this service
+    if (currentDay.originalAllocations && currentDay.originalAllocations[service]) {
+        currentDay.allocations[service] = currentDay.originalAllocations[service];
+    } else {
+        // Fallback: if no original stored (for old data), recalculate
+        const candidates = assignments[service] || [];
+        if (candidates.length > 0) {
+            candidates.sort((a, b) => getServiceCount(a) - getServiceCount(b));
+            currentDay.allocations[service] = candidates[0];
+        }
+    }
+    
+    saveAndRefresh();
+}
+
 function toggleLeave() {
     const today = new Date().toLocaleDateString();
     let dayIdx = history.findIndex(h => h.date === today);
@@ -178,7 +207,10 @@ function renderToday() {
             <h4>${service}</h4>
             <p>Assigned: <strong>${devotee}</strong></p>
             <p><small>30-day count: ${getServiceCount(devotee)}</small></p>
-            <button class="btn-danger" onclick="reassign('${service}')">Not Available</button>
+            <div class="button-group">
+                <button class="btn-danger" onclick="reassign('${service}')">Not Available</button>
+                <button class="btn-reset" onclick="resetServiceAvailability('${service}')">Reset</button>
+            </div>
         </div>
     `).join('');
 
