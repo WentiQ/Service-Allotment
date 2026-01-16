@@ -6,6 +6,18 @@ const services = [
     "Right Room", "Left Room", "Flat-2 Room"
 ];
 
+// Display names for services (edit these to change how they appear in UI)
+const serviceDisplayNames = {
+    "Outside Area": "Outside Area cleaning"
+    // Add more custom display names here if needed
+    // Example: "Prasadam - Morning": "Morning Prasadam Service"
+};
+
+// Helper function to get display name
+function getDisplayName(service) {
+    return serviceDisplayNames[service] || service;
+}
+
 let devotees = JSON.parse(localStorage.getItem('devotees')) || [];
 let assignments = JSON.parse(localStorage.getItem('assignments')) || {}; // { service: [devoteeNames] }
 let history = JSON.parse(localStorage.getItem('serviceHistory')) || []; // [{date, leave, allocations: {service: devotee}, unavailable: {service: [devoteeNames]}, confirmed: {service: devotee}, isConfirmed: boolean}]
@@ -38,7 +50,7 @@ function renderCategories() {
     const container = document.getElementById('serviceCategories');
     container.innerHTML = services.map(s => `
         <div class="service-box">
-            <strong>${s}</strong><br>
+            <strong>${getDisplayName(s)}</strong><br>
             <select onchange="assignToService('${s}', this.value)">
                 <option value="">+ Add Devotee</option>
                 ${devotees.map(d => `<option value="${d}">${d}</option>`).join('')}
@@ -281,7 +293,7 @@ function renderTodayConfirmation() {
                 
                 return `
                     <div class="confirmation-card">
-                        <h4>${service}</h4>
+                        <h4>${getDisplayName(service)}</h4>
                         <p><small>Assigned: ${assignedDevotee}</small></p>
                         <label>Who performed this service?</label>
                         <select id="confirm_${service.replace(/\s+/g, '_')}" onchange="updateConfirmation('${service}', this.value)">
@@ -319,7 +331,7 @@ function renderTomorrowSchedule() {
 
     container.innerHTML = Object.entries(tomorrowRecord.allocations).map(([service, devotee]) => `
         <div class="service-card">
-            <h4>${service}</h4>
+            <h4>${getDisplayName(service)}</h4>
             <p>Assigned: <strong>${devotee}</strong></p>
             <p><small>30-day count: ${getServiceCount(devotee)}</small></p>
             <div class="button-group">
@@ -413,7 +425,7 @@ function renderSummaryTable(todayRecord) {
             const devotee = todayRecord.allocations[service];
             tableRows += `
                 <tr>
-                    <td colspan="2">${service}</td>
+                    <td colspan="2">${getDisplayName(service)}</td>
                     <td><strong>${devotee}</strong></td>
                 </tr>
             `;
@@ -480,7 +492,7 @@ function renderServiceWiseCount() {
                 
                 return `
                     <div class="stat-card">
-                        <h3 class="stat-service-name">${service}</h3>
+                        <h3 class="stat-service-name">${getDisplayName(service)}</h3>
                         ${hasDevotees ? `
                             <table class="mini-table">
                                 <thead>

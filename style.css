@@ -315,6 +315,10 @@ button:active {
     text-align: center; 
 }
 
+.summary-table th:last-child { 
+    text-align: center; 
+}
+
 .devotee-stats-table th:first-child { 
     width: 40px; 
     text-align: center; 
@@ -330,6 +334,8 @@ button:active {
     padding: 18px 10px; 
     font-size: 14px;
     border: 1px solid #000;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .devotee-stats-table td:first-child { 
